@@ -69,6 +69,7 @@ func NewErrorHandlerInterceptor() connect.UnaryInterceptorFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			sensitiveCodes := []connect.Code{connect.CodeInternal, connect.CodeAlreadyExists, connect.CodePermissionDenied}
 			resp, err := next(ctx, req)
+			log.Println(err)
 			if connectErr, ok := errors.AsType[*connect.Error](err); ok {
 				if slices.Contains(sensitiveCodes, connectErr.Code()) {
 					err = connect.NewError(connectErr.Code(), errors.New(codeToText(connectErr.Code())))

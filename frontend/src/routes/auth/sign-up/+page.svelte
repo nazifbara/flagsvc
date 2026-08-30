@@ -7,6 +7,8 @@
 	import Separator from '$lib/components/ui/separator/separator.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { signUpSchema } from '$lib/zodSchemas';
+	import { onMount } from 'svelte';
+	import dayjs from '$lib/dayjs';
 	import Spinner from '$lib/components/ui/spinner/spinner.svelte';
 	import { authClient } from '$lib/client';
 	import { ConnectError } from '@connectrpc/connect';
@@ -36,6 +38,10 @@
 				isLoading = false;
 			}
 		}
+	});
+
+	onMount(() => {
+		$formData.timezone = dayjs.tz.guess();
 	});
 
 	const { form: formData, enhance, submitting, message } = form;
@@ -131,6 +137,7 @@
 						</Form.Control>
 						<Form.FieldErrors />
 					</Form.Field>
+					<input name="timezone" bind:value={$formData.timezone} hidden />
 
 					<!-- Error Message -->
 					{#if $message}
