@@ -1,0 +1,108 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"slices"
+	"time"
+
+	store "github/nazifbara/sveltekit-go-connect-grpc-starter/backend/internal"
+	"github/nazifbara/sveltekit-go-connect-grpc-starter/backend/internal/authservice"
+	"github/nazifbara/sveltekit-go-connect-grpc-starter/gen/go/v1/sv1connect"
+
+	"connectrpc.com/connect"
+	"connectrpc.com/validate"
+)
+
+type server struct {
+	httpServer *http.Server
+	cancel     context.CancelFunc
+}
+
+func (s *server) start() error {
+	ln, err := net.Listen("tcp", s.httpServer.Addr)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("server running http://localhost:%d", ln.Addr().(*net.TCPAddr).Port)
+	if err := s.httpServer.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	return nil
+}
+
+func (s *server) shutdown(ctx context.Context) error {
+	return s.httpServer.Shutdown(ctx)
+}
+
+func newServer(port int, store *store.Store, cancel context.CancelFunc) *server {
+	mux := http.NewServeMux()
+	srv := &http.Server{
+		Addr:              fmt.Sprintf(":%d", port),
+		Handler:           withCORS(mux),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+	s := &server{
+		httpServer: srv,
+		cancel:     cancel,
+	}
+
+	validator := validate.NewInterceptor()
+	path, handler := sv1connect.NewAuthServiceHandler(
+		authservice.New(store),
+		connect.WithInterceptors(
+			NewErrorHandlerInterceptor(),
+			validator,
+		),
+	)
+	mux.Handle(path, handler)
+	return s
+}
+
+func NewErrorHandlerInterceptor() connect.UnaryInterceptorFunc {
+	interceptor := func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			sensitiveCodes := []connect.Code{connect.CodeInternal, connect.CodeAlreadyExists, connect.CodePermissionDenied}
+			resp, err := next(ctx, req)
+			if connectErr, ok := errors.AsType[*connect.Error](err); ok {
+				if slices.Contains(sensitiveCodes, connectErr.Code()) {
+					err = connect.NewError(connectErr.Code(), errors.New(codeToText(connectErr.Code())))
+				}
+			}
+			return resp, err
+		}
+	}
+	return connect.UnaryInterceptorFunc(interceptor)
+}
+
+func codeToText(code connect.Code) string {
+	var text string
+	switch code {
+	case connect.CodeAlreadyExists:
+		text = "can't duplicate"
+	case connect.CodeNotFound:
+		text = "not found"
+	default:
+		text = "something went wrong"
+	}
+	return text
+}
+
+func withCORS(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Connect-Protocol-Version, Connect-Timeout-Ms")
+		w.Header().Set("Access-Control-Expose-Headers", "Grpc-Status, Grpc-Message")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
+}

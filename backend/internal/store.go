@@ -1,0 +1,39 @@
+// Package store for database operations
+package store
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+
+	"github/nazifbara/sveltekit-go-connect-grpc-starter/backend/internal/database"
+)
+
+type Store struct {
+	*database.Queries
+	db *sql.DB
+}
+
+func (s *Store) ExecTx(ctx context.Context, fn func(*database.Queries) error) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	qtx := s.WithTx(tx)
+	err = fn(qtx)
+	if err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			return fmt.Errorf("tx error: %w, rollback error: %w", err, rbErr)
+		}
+		return err
+	}
+	return tx.Commit()
+}
+
+func New(dbURL string) (*Store, error) {
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		return nil, err
+	}
+	return &Store{Queries: database.New(db), db: db}, nil
+}

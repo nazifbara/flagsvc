@@ -1,0 +1,10 @@
+{
+	"/": [],
+	"/auth": [
+		"src/routes/auth/+page.server.ts"
+	],
+	"/auth/sign-in": [
+		"src/routes/auth/sign-in/+page.server.ts"
+	],
+	"/auth/sign-up": []
+}
