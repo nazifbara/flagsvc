@@ -4,7 +4,7 @@ package omerrors
 import (
 	"errors"
 
-	"connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	"github.com/lib/pq"
 )
 
@@ -13,9 +13,9 @@ func FromDBErr(err error) error {
 	if pqErr, ok := errors.AsType[*pq.Error](err); ok {
 		switch pqErr.Code {
 		case "23505":
-			newErr = connect.NewError(connect.CodeAlreadyExists, err)
+			newErr = connect.NewError(connect.CodeAlreadyExists, err.Error()).WithCause(err)
 		default:
-			newErr = connect.NewError(connect.CodeInternal, err)
+			newErr = connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 		}
 	}
 	return newErr

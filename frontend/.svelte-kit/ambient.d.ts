@@ -41,7 +41,6 @@ declare module '$env/static/private' {
 	export const NVM_INC: string;
 	export const MANPATH: string;
 	export const GHOSTTY_RESOURCES_DIR: string;
-	export const AWS_S3_REGION: string;
 	export const TERM_PROGRAM: string;
 	export const NODE: string;
 	export const NVM_CD_FLAGS: string;
@@ -51,26 +50,19 @@ declare module '$env/static/private' {
 	export const MAKEFLAGS: string;
 	export const TMPDIR: string;
 	export const HOMEBREW_REPOSITORY: string;
-	export const AWS_S3_BUCKET: string;
 	export const TERM_PROGRAM_VERSION: string;
 	export const FPATH: string;
-	export const CLERK_JWT_KEY: string;
 	export const npm_config_registry: string;
 	export const PNPM_HOME: string;
 	export const ZSH: string;
 	export const GOOSE_MIGRATION_DIR: string;
-	export const CLERK_JWT_ISSUER: string;
-	export const PRIVATE_PRODUCT_VARIANT_ID: string;
 	export const USER: string;
 	export const NVM_DIR: string;
 	export const npm_config_recursive: string;
 	export const LS_COLORS: string;
-	export const PRIVATE_LIVEKIT_API_SECRET: string;
 	export const CURDIR: string;
 	export const COMMAND_MODE: string;
-	export const JWKS: string;
 	export const PNPM_SCRIPT_SRC_DIR: string;
-	export const ENV: string;
 	export const ENVMAN_LOAD: string;
 	export const SSH_AUTH_SOCK: string;
 	export const __CF_USER_TEXT_ENCODING: string;
@@ -79,6 +71,7 @@ declare module '$env/static/private' {
 	export const PAGER: string;
 	export const MFLAGS: string;
 	export const TMUX: string;
+	export const API_PORT: string;
 	export const LSCOLORS: string;
 	export const npm_config_frozen_lockfile: string;
 	export const npm_config_verify_deps_before_run: string;
@@ -86,38 +79,30 @@ declare module '$env/static/private' {
 	export const GHOSTTY_SHELL_FEATURES: string;
 	export const npm_config_engine_strict: string;
 	export const __CFBundleIdentifier: string;
-	export const STRIPE_WEBHOOK_SIGNING_SECRET: string;
 	export const PWD: string;
 	export const npm_command: string;
-	export const AWS_SECRET_ACCESS_KEY: string;
 	export const npm_lifecycle_event: string;
 	export const LANG: string;
 	export const npm_package_name: string;
 	export const NODE_PATH: string;
 	export const TMUX_PANE: string;
 	export const XPC_FLAGS: string;
-	export const PRIVATE_STORE_ID: string;
-	export const STRIPE_SECRET_KEY: string;
 	export const XPC_SERVICE_NAME: string;
-	export const APP_ID: string;
 	export const npm_package_version: string;
-	export const AWS_ACCESS_KEY_ID: string;
 	export const HOME: string;
 	export const SHLVL: string;
 	export const TERMINFO: string;
-	export const CLERK_SECRET_KEY: string;
 	export const HOMEBREW_PREFIX: string;
-	export const PAYMENT_VERIFICATION_PERIOD_MS: string;
 	export const LOGNAME: string;
 	export const LESS: string;
 	export const npm_lifecycle_script: string;
 	export const XDG_DATA_DIRS: string;
 	export const GHOSTTY_BIN_DIR: string;
 	export const TMUX_PLUGIN_MANAGER_PATH: string;
-	export const LIVEKIT_API_SECRET: string;
 	export const MAKEFILE_LIST: string;
 	export const NVM_BIN: string;
 	export const BUN_INSTALL: string;
+	export const DB_URL: string;
 	export const npm_config_user_agent: string;
 	export const INFOPATH: string;
 	export const HOMEBREW_CELLAR: string;
@@ -162,11 +147,7 @@ declare module '$env/static/private' {
  * The above values will be the same _even if_ different values for `ENVIRONMENT` or `PUBLIC_BASE_URL` are set at runtime, as they are statically replaced in your code with their build time values.
  */
 declare module '$env/static/public' {
-	export const PUBLIC_SITE: string;
-	export const PUBLIC_LIVEKIT_URL: string;
-	export const PUBLIC_MESSAGE_MAX_CHAR_LIMIT: string;
-	export const PUBLIC_LIVEKIT_API_KEY: string;
-	export const PUBLIC_ENV: string;
+	
 }
 
 /**
@@ -219,7 +200,6 @@ declare module '$env/dynamic/private' {
 		NVM_INC: string;
 		MANPATH: string;
 		GHOSTTY_RESOURCES_DIR: string;
-		AWS_S3_REGION: string;
 		TERM_PROGRAM: string;
 		NODE: string;
 		NVM_CD_FLAGS: string;
@@ -229,26 +209,19 @@ declare module '$env/dynamic/private' {
 		MAKEFLAGS: string;
 		TMPDIR: string;
 		HOMEBREW_REPOSITORY: string;
-		AWS_S3_BUCKET: string;
 		TERM_PROGRAM_VERSION: string;
 		FPATH: string;
-		CLERK_JWT_KEY: string;
 		npm_config_registry: string;
 		PNPM_HOME: string;
 		ZSH: string;
 		GOOSE_MIGRATION_DIR: string;
-		CLERK_JWT_ISSUER: string;
-		PRIVATE_PRODUCT_VARIANT_ID: string;
 		USER: string;
 		NVM_DIR: string;
 		npm_config_recursive: string;
 		LS_COLORS: string;
-		PRIVATE_LIVEKIT_API_SECRET: string;
 		CURDIR: string;
 		COMMAND_MODE: string;
-		JWKS: string;
 		PNPM_SCRIPT_SRC_DIR: string;
-		ENV: string;
 		ENVMAN_LOAD: string;
 		SSH_AUTH_SOCK: string;
 		__CF_USER_TEXT_ENCODING: string;
@@ -257,6 +230,7 @@ declare module '$env/dynamic/private' {
 		PAGER: string;
 		MFLAGS: string;
 		TMUX: string;
+		API_PORT: string;
 		LSCOLORS: string;
 		npm_config_frozen_lockfile: string;
 		npm_config_verify_deps_before_run: string;
@@ -264,38 +238,30 @@ declare module '$env/dynamic/private' {
 		GHOSTTY_SHELL_FEATURES: string;
 		npm_config_engine_strict: string;
 		__CFBundleIdentifier: string;
-		STRIPE_WEBHOOK_SIGNING_SECRET: string;
 		PWD: string;
 		npm_command: string;
-		AWS_SECRET_ACCESS_KEY: string;
 		npm_lifecycle_event: string;
 		LANG: string;
 		npm_package_name: string;
 		NODE_PATH: string;
 		TMUX_PANE: string;
 		XPC_FLAGS: string;
-		PRIVATE_STORE_ID: string;
-		STRIPE_SECRET_KEY: string;
 		XPC_SERVICE_NAME: string;
-		APP_ID: string;
 		npm_package_version: string;
-		AWS_ACCESS_KEY_ID: string;
 		HOME: string;
 		SHLVL: string;
 		TERMINFO: string;
-		CLERK_SECRET_KEY: string;
 		HOMEBREW_PREFIX: string;
-		PAYMENT_VERIFICATION_PERIOD_MS: string;
 		LOGNAME: string;
 		LESS: string;
 		npm_lifecycle_script: string;
 		XDG_DATA_DIRS: string;
 		GHOSTTY_BIN_DIR: string;
 		TMUX_PLUGIN_MANAGER_PATH: string;
-		LIVEKIT_API_SECRET: string;
 		MAKEFILE_LIST: string;
 		NVM_BIN: string;
 		BUN_INSTALL: string;
+		DB_URL: string;
 		npm_config_user_agent: string;
 		INFOPATH: string;
 		HOMEBREW_CELLAR: string;
@@ -359,11 +325,6 @@ declare module '$env/dynamic/private' {
  */
 declare module '$env/dynamic/public' {
 	export const env: {
-		PUBLIC_SITE: string;
-		PUBLIC_LIVEKIT_URL: string;
-		PUBLIC_MESSAGE_MAX_CHAR_LIMIT: string;
-		PUBLIC_LIVEKIT_API_KEY: string;
-		PUBLIC_ENV: string;
 		[key: `PUBLIC_${string}`]: string | undefined;
 	}
 }

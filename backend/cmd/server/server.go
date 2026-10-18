@@ -14,7 +14,8 @@ import (
 	"github/nazifbara/sveltekit-go-connect-grpc-starter/backend/internal/authservice"
 	"github/nazifbara/sveltekit-go-connect-grpc-starter/gen/go/v1/sv1connect"
 
-	"connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	"connectrpc.com/validate"
 )
 
@@ -41,44 +42,47 @@ func (s *server) shutdown(ctx context.Context) error {
 }
 
 func newServer(port int, store *store.Store, cancel context.CancelFunc) *server {
+	connectServer := connect.NewServer(
+		NewErrorHandlerInterceptor(),
+		validate.NewServerInterceptor(),
+	)
+	connectServer.Register()
+	sv1connect.RegisterAuthServiceHandler(
+		connectServer,
+		authservice.New(store),
+	)
 	mux := http.NewServeMux()
+	connecthttp.Mount(mux, connectServer)
+	p := new(http.Protocols)
+	p.SetHTTP1(true)
+	p.SetUnencryptedHTTP2(true)
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", port),
 		Handler:           withCORS(mux),
 		ReadHeaderTimeout: 5 * time.Second,
+		Protocols:         p,
 	}
 	s := &server{
 		httpServer: srv,
 		cancel:     cancel,
 	}
-
-	validator := validate.NewInterceptor()
-	path, handler := sv1connect.NewAuthServiceHandler(
-		authservice.New(store),
-		connect.WithInterceptors(
-			NewErrorHandlerInterceptor(),
-			validator,
-		),
-	)
-	mux.Handle(path, handler)
 	return s
 }
 
-func NewErrorHandlerInterceptor() connect.UnaryInterceptorFunc {
-	interceptor := func(next connect.UnaryFunc) connect.UnaryFunc {
-		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+func NewErrorHandlerInterceptor() connect.ServerInterceptor {
+	return func(next connect.ServerFunc) connect.ServerFunc {
+		return func(ctx context.Context, spec connect.Spec, stream connect.ServerStream) error {
 			sensitiveCodes := []connect.Code{connect.CodeInternal, connect.CodeAlreadyExists, connect.CodePermissionDenied}
-			resp, err := next(ctx, req)
+			err := next(ctx, spec, stream)
 			log.Println(err)
 			if connectErr, ok := errors.AsType[*connect.Error](err); ok {
 				if slices.Contains(sensitiveCodes, connectErr.Code()) {
-					err = connect.NewError(connectErr.Code(), errors.New(codeToText(connectErr.Code())))
+					err = connect.NewError(connectErr.Code(), codeToText(connectErr.Code())).WithCause(err)
 				}
 			}
-			return resp, err
+			return err
 		}
 	}
-	return connect.UnaryInterceptorFunc(interceptor)
 }
 
 func codeToText(code connect.Code) string {

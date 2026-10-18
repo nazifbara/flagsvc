@@ -1,17 +1,17 @@
 services:
   postgres_db:
     image: postgres:16-alpine
-    container_name: orbitalmeet_db
+    container_name: starter_db
     environment:
       POSTGRES_USER: testuser
       POSTGRES_PASSWORD: testpassword
-      POSTGRES_DB: orbitalmeet
+      POSTGRES_DB: starter
     ports:
-      - "5433:5432"
+      - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U testuser -d orbitalmeet"]
+      test: ['CMD-SHELL', 'pg_isready -U testuser -d starter']
       interval: 5s
       timeout: 5s
       retries: 5
