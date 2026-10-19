@@ -6,10 +6,10 @@ import (
 	"connectrpc.com/connect/v2"
 	"github.com/alexedwards/argon2id"
 
-	store "github/nazifbara/sveltekit-go-connect-grpc-starter/backend/internal"
-	"github/nazifbara/sveltekit-go-connect-grpc-starter/backend/internal/database"
-	"github/nazifbara/sveltekit-go-connect-grpc-starter/backend/internal/omerrors"
-	sv1 "github/nazifbara/sveltekit-go-connect-grpc-starter/gen/go/v1"
+	"github/nazifbara/flagsvc/backend/internal/database"
+	"github/nazifbara/flagsvc/backend/internal/omerrors"
+	"github/nazifbara/flagsvc/backend/internal/store"
+	auth "github/nazifbara/flagsvc/gen/go/flagsvc/auth/v1"
 )
 
 type Service struct {
@@ -24,8 +24,8 @@ func New(store *store.Store) *Service {
 
 func (s *Service) SignUp(
 	ctx context.Context,
-	req *sv1.SignUpRequest,
-) (*sv1.SignUpResponse, error) {
+	req *auth.SignUpRequest,
+) (*auth.SignUpResponse, error) {
 	err := s.store.ExecTx(ctx, func(q *database.Queries) error {
 		passwordHash, err := hashPassword(req.Password)
 		if err != nil {
@@ -46,11 +46,10 @@ func (s *Service) SignUp(
 		_, err = q.CreateUser(
 			ctx,
 			database.CreateUserParams{
-				UserID:    identity.ID,
+				ID:        identity.ID,
 				Email:     req.Email,
 				Firstname: req.FirstName,
 				Lastname:  req.LastName,
-				Timezone:  req.Timezone,
 			},
 		)
 		if err != nil {
@@ -63,7 +62,7 @@ func (s *Service) SignUp(
 		return nil, err
 	}
 
-	return &sv1.SignUpResponse{}, nil
+	return &auth.SignUpResponse{}, nil
 }
 
 func hashPassword(password string) (string, error) {

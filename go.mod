@@ -1,4 +1,4 @@
-module github/nazifbara/sveltekit-go-connect-grpc-starter
+module github/nazifbara/flagsvc
 
 go 1.27.0
 

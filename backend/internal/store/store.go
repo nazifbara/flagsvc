@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github/nazifbara/sveltekit-go-connect-grpc-starter/backend/internal/database"
+	"github/nazifbara/flagsvc/backend/internal/database"
 )
 
 type Store struct {

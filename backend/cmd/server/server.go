@@ -7,12 +7,12 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"slices"
 	"time"
 
-	store "github/nazifbara/sveltekit-go-connect-grpc-starter/backend/internal"
-	"github/nazifbara/sveltekit-go-connect-grpc-starter/backend/internal/authservice"
-	"github/nazifbara/sveltekit-go-connect-grpc-starter/gen/go/v1/sv1connect"
+	"github/nazifbara/flagsvc/backend/internal/authservice"
+	"github/nazifbara/flagsvc/backend/internal/interceptor"
+	"github/nazifbara/flagsvc/backend/internal/store"
+	"github/nazifbara/flagsvc/gen/go/flagsvc/auth/v1/authconnect"
 
 	connect "connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
@@ -43,11 +43,10 @@ func (s *server) shutdown(ctx context.Context) error {
 
 func newServer(port int, store *store.Store, cancel context.CancelFunc) *server {
 	connectServer := connect.NewServer(
-		NewErrorHandlerInterceptor(),
+		interceptor.NewLoggingInterceptor(),
 		validate.NewServerInterceptor(),
 	)
-	connectServer.Register()
-	sv1connect.RegisterAuthServiceHandler(
+	authconnect.RegisterAuthServiceHandler(
 		connectServer,
 		authservice.New(store),
 	)
@@ -67,35 +66,6 @@ func newServer(port int, store *store.Store, cancel context.CancelFunc) *server 
 		cancel:     cancel,
 	}
 	return s
-}
-
-func NewErrorHandlerInterceptor() connect.ServerInterceptor {
-	return func(next connect.ServerFunc) connect.ServerFunc {
-		return func(ctx context.Context, spec connect.Spec, stream connect.ServerStream) error {
-			sensitiveCodes := []connect.Code{connect.CodeInternal, connect.CodeAlreadyExists, connect.CodePermissionDenied}
-			err := next(ctx, spec, stream)
-			log.Println(err)
-			if connectErr, ok := errors.AsType[*connect.Error](err); ok {
-				if slices.Contains(sensitiveCodes, connectErr.Code()) {
-					err = connect.NewError(connectErr.Code(), codeToText(connectErr.Code())).WithCause(err)
-				}
-			}
-			return err
-		}
-	}
-}
-
-func codeToText(code connect.Code) string {
-	var text string
-	switch code {
-	case connect.CodeAlreadyExists:
-		text = "can't duplicate"
-	case connect.CodeNotFound:
-		text = "not found"
-	default:
-		text = "something went wrong"
-	}
-	return text
 }
 
 func withCORS(h http.Handler) http.Handler {

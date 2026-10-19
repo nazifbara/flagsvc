@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	store "github/nazifbara/sveltekit-go-connect-grpc-starter/backend/internal"
+	"github/nazifbara/flagsvc/backend/internal/store"
 
 	_ "github.com/lib/pq"
 )
