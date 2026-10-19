@@ -9,10 +9,12 @@ import (
 	"net/http"
 	"time"
 
-	"github/nazifbara/flagsvc/backend/internal/authservice"
-	"github/nazifbara/flagsvc/backend/internal/interceptor"
-	"github/nazifbara/flagsvc/backend/internal/store"
-	"github/nazifbara/flagsvc/gen/go/flagsvc/auth/v1/authconnect"
+	"github.com/nazifbara/flagsvc/backend/internal/authservice"
+	"github.com/nazifbara/flagsvc/backend/internal/interceptor"
+	"github.com/nazifbara/flagsvc/backend/internal/pingservice"
+	"github.com/nazifbara/flagsvc/backend/internal/store"
+	"github.com/nazifbara/flagsvc/gen/go/flagsvc/auth/v1/authconnect"
+	"github.com/nazifbara/flagsvc/gen/go/flagsvc/ping/v1/pingconnect"
 
 	connect "connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
@@ -49,6 +51,10 @@ func newServer(port int, store *store.Store, cancel context.CancelFunc) *server 
 	authconnect.RegisterAuthServiceHandler(
 		connectServer,
 		authservice.New(store),
+	)
+	pingconnect.RegisterPingServiceHandler(
+		connectServer,
+		pingservice.PingService{},
 	)
 	mux := http.NewServeMux()
 	connecthttp.Mount(mux, connectServer)

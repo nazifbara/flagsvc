@@ -3,10 +3,10 @@ package interceptor
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"slices"
 
-	"github/nazifbara/flagsvc/backend/internal/utils"
+	"github.com/nazifbara/flagsvc/backend/internal/utils"
 
 	connect "connectrpc.com/connect/v2"
 )
@@ -15,9 +15,10 @@ func NewLoggingInterceptor() connect.ServerInterceptor {
 	return func(next connect.ServerFunc) connect.ServerFunc {
 		return func(ctx context.Context, spec connect.Spec, stream connect.ServerStream) error {
 			sensitiveCodes := []connect.Code{connect.CodeInternal, connect.CodeAlreadyExists, connect.CodePermissionDenied}
+			info, _ := connect.CallInfoForServerContext(ctx)
 			err := next(ctx, spec, stream)
 			if err != nil {
-				log.Println(err)
+				slog.Log(ctx, slog.LevelError, err.Error(), slog.String("caller-address", info.PeerAddr), slog.String("procedure", info.Spec.Procedure))
 			}
 			if connectErr, ok := errors.AsType[*connect.Error](err); ok {
 				if slices.Contains(sensitiveCodes, connectErr.Code()) {

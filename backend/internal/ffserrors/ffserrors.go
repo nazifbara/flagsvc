@@ -1,5 +1,5 @@
 // Package omerrors maps errors to connect.Error
-package omerrors
+package ffserrors
 
 import (
 	"errors"
@@ -13,9 +13,9 @@ func FromDBErr(err error) error {
 	if pqErr, ok := errors.AsType[*pq.Error](err); ok {
 		switch pqErr.Code {
 		case "23505":
-			newErr = connect.NewError(connect.CodeAlreadyExists, err.Error()).WithCause(err)
+			newErr = connect.NewError(connect.CodeAlreadyExists, connect.CodeAlreadyExists.String()).WithCause(err)
 		default:
-			newErr = connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
+			newErr = connect.NewError(connect.CodeInternal, connect.CodeInternal.String()).WithCause(err)
 		}
 	}
 	return newErr

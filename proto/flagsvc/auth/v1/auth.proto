@@ -4,29 +4,32 @@ package flagsvc.auth.v1;
 
 import "buf/validate/validate.proto";
 
-option go_package = "github/nazifbara/flagsvc/gen/go/flagsvc/auth/v1;auth";
+option go_package = "github.com/nazifbara/flagsvc/gen/go/flagsvc/auth/v1;auth";
 
 service AuthService {
   rpc SignUp(SignUpRequest) returns (SignUpResponse) {}
 }
 
 message SignUpRequest {
-  string email = 1 [
-    (buf.validate.field).string.email = true,
-    (buf.validate.field).string.max_len = 255
-  ];
-  string first_name = 2 [
-    (buf.validate.field).string.min_len = 1,
-    (buf.validate.field).string.max_len = 50
-  ];
-  string last_name = 3 [
-    (buf.validate.field).string.min_len = 1,
-    (buf.validate.field).string.max_len = 50
-  ];
-  string password = 4 [
-    (buf.validate.field).string.min_len = 8,
-    (buf.validate.field).string.max_len = 68
-  ];
+  string email = 1 [(buf.validate.field).string = {
+    email: true
+    max_len: 255
+  }];
+
+  string first_name = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 50
+  }];
+
+  string last_name = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 50
+  }];
+
+  string password = 4 [(buf.validate.field).string = {
+    min_len: 8
+    max_len: 68
+  }];
 }
 
 message SignUpResponse {}
