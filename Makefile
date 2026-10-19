@@ -5,16 +5,22 @@ export GOOSE_MIGRATION_DIR  ?= ./backend/sql/schema
 .PHONY: gen dev-backend dev-frontend build-backend sqlc migrate-up migrate-down
 
 
-gen:
+proto-gen:
 	buf generate
+
+proto-lint:
+	buf lint
+
+go-test:
+	go test ./...
 
 sqlc:
 	sqlc generate .
 
-db-up:
+up:
 	goose postgres $(DB_URL) up
 
-db-down:
+down:
 	goose postgres $(DB_URL) down
 
 dev-backend:

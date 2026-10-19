@@ -6,10 +6,10 @@ import (
 	"connectrpc.com/connect/v2"
 	"github.com/alexedwards/argon2id"
 
-	"github/nazifbara/flagsvc/backend/internal/database"
-	"github/nazifbara/flagsvc/backend/internal/omerrors"
-	"github/nazifbara/flagsvc/backend/internal/store"
-	auth "github/nazifbara/flagsvc/gen/go/flagsvc/auth/v1"
+	"github.com/nazifbara/flagsvc/backend/internal/database"
+	"github.com/nazifbara/flagsvc/backend/internal/ffserrors"
+	"github.com/nazifbara/flagsvc/backend/internal/store"
+	auth "github.com/nazifbara/flagsvc/gen/go/flagsvc/auth/v1"
 )
 
 type Service struct {
@@ -29,7 +29,7 @@ func (s *Service) SignUp(
 	err := s.store.ExecTx(ctx, func(q *database.Queries) error {
 		passwordHash, err := hashPassword(req.Password)
 		if err != nil {
-			return connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
+			return connect.NewError(connect.CodeInternal, connect.CodeInternal.String()).WithCause(err)
 		}
 
 		identity, err := q.CreateAuth(
@@ -40,7 +40,7 @@ func (s *Service) SignUp(
 			},
 		)
 		if err != nil {
-			return connect.NewError(connect.CodeAlreadyExists, err.Error()).WithCause(err)
+			return ffserrors.FromDBErr(err)
 		}
 
 		_, err = q.CreateUser(
@@ -53,7 +53,7 @@ func (s *Service) SignUp(
 			},
 		)
 		if err != nil {
-			return omerrors.FromDBErr(err)
+			return ffserrors.FromDBErr(err)
 		}
 
 		return nil

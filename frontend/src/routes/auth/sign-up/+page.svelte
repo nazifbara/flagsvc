@@ -9,7 +9,7 @@
 	import { signUpSchema } from '$lib/zodSchemas';
 	import Spinner from '$lib/components/ui/spinner/spinner.svelte';
 	import { authClient } from '$lib/client';
-	import { ConnectError } from '@connectrpc/connect';
+	import { ConnectError, Code } from '@connectrpc/connect';
 	import { goto } from '$app/navigation';
 
 	let isLoading = $state(false);
@@ -28,7 +28,7 @@
 				goto('/auth/sign-in');
 			} catch (err) {
 				if (err instanceof ConnectError) {
-					if (err.code === 6) {
+					if (err.code === Code.AlreadyExists) {
 						setMessage(form, 'Account already exist');
 					}
 					console.log({ err });

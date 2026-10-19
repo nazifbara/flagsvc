@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package flagsvc.ping.v1;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/nazifbara/flagsvc/gen/go/flagsvc/ping/v1;ping";
+
+message PingRequest {
+  string message = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+}
+
+message PingResponse {
+  string message = 1;
+}
+
+service PingService {
+  rpc Ping(PingRequest) returns (PingResponse) {}
+}

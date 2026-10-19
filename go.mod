@@ -1,10 +1,9 @@
-module github/nazifbara/flagsvc
+module github.com/nazifbara/flagsvc
 
-go 1.27.0
+go 1.27.2
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.2
-	connectrpc.com/connect v1.21.1
 	connectrpc.com/connect/v2 v2.0.1
 	connectrpc.com/validate v0.9.0
 	github.com/alexedwards/argon2id v1.0.0
@@ -17,6 +16,7 @@ require (
 	buf.build/go/protovalidate v1.4.0 // indirect
 	cel.dev/cel-go v0.32.0 // indirect
 	cel.dev/expr v0.25.3 // indirect
+	connectrpc.com/connect v1.21.1 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
