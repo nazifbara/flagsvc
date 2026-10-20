@@ -5,12 +5,6 @@ on:
     branches: [main]
 
 jobs:
-  buf:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: bufbuild/buf-action@v1
-
   tests:
     name: Tests
     runs-on: ubuntu-latest
@@ -23,6 +17,13 @@ jobs:
         uses: sqlc-dev/setup-sqlc@v4
         with:
           sqlc-version: '1.31.1'
+
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          version: latest
+
+      - name: Generate proto code
+        run: buf generate
 
       - name: Run sqlc generate
         run: sqlc generate
@@ -56,6 +57,13 @@ jobs:
         uses: sqlc-dev/setup-sqlc@v4
         with:
           sqlc-version: '1.31.1'
+
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          version: latest
+
+      - name: Generate proto code
+        run: buf generate
 
       - name: Run sqlc generate
         run: sqlc generate
