@@ -7,6 +7,7 @@ require (
 	connectrpc.com/connect/v2 v2.0.1
 	connectrpc.com/validate v0.9.0
 	github.com/alexedwards/argon2id v1.0.0
+	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.12.3
 	google.golang.org/protobuf v1.36.12
