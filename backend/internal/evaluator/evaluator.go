@@ -44,10 +44,6 @@ type numberClause struct {
 	values    []float64
 }
 
-func (c numberClause) Match(attributes map[string][]any) (bool, error) {
-	return false, nil
-}
-
 type booleanClause struct {
 	attribute string
 	operator  string
@@ -125,8 +121,8 @@ func convert[T any](values []any) ([]T, error) {
 	return out, nil
 }
 
-func (c stringClause) Match(attributs map[string][]any) (bool, error) {
-	values, ok := attributs[c.attribute]
+func (c stringClause) Match(attributes map[string][]any) (bool, error) {
+	values, ok := attributes[c.attribute]
 	if !ok || len(values) == 0 {
 		return false, nil
 	}
@@ -144,6 +140,40 @@ func (c stringClause) Match(attributs map[string][]any) (bool, error) {
 			return false, fmt.Errorf("multi-value attribute not supported for %s operation in string clause", c.operator)
 		}
 		return matchString(c.operator, c.values[0], inputValues[0])
+	}
+}
+
+func (c numberClause) Match(attributes map[string][]any) (bool, error) {
+	values, ok := attributes[c.attribute]
+	if !ok || len(values) == 0 {
+		return false, nil
+	}
+	inputValues, err := convert[float64](values)
+	if err != nil {
+		return false, fmt.Errorf("invalid value for attribute %q: %w", c.attribute, err)
+	}
+	if !slices.Contains([]string{ilOp, cntOp}, c.operator) && len(inputValues) > 1 {
+		return false, fmt.Errorf("multi-value attribute not supported for %s operation in number clause", c.operator)
+	}
+	switch c.operator {
+	case ilOp:
+		return valueContains(c.values, inputValues), nil
+	case cntOp:
+		return valueContains(inputValues, c.values), nil
+	case eqOp:
+		return inputValues[0] == c.values[0], nil
+	case neqOp:
+		return inputValues[0] != c.values[0], nil
+	case gtOp:
+		return inputValues[0] > c.values[0], nil
+	case gteOp:
+		return inputValues[0] >= c.values[0], nil
+	case ltOp:
+		return inputValues[0] < c.values[0], nil
+	case lteOp:
+		return inputValues[0] <= c.values[0], nil
+	default:
+		return false, fmt.Errorf("number clause with invalid operator: %q", c.operator)
 	}
 }
 

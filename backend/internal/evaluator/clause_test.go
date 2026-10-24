@@ -2,6 +2,7 @@ package evaluator
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"testing"
 
@@ -323,6 +324,262 @@ func TestStringClauseMatch(t *testing.T) {
 			clause: stringClause{attribute: "country", operator: gtOp, values: []string{"BJ"}},
 			input:  map[string][]any{"country": {"BJ"}},
 			errStr: "unknown operator: gt",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got, err := tc.clause.Match(tc.input)
+			if tc.errStr != "" {
+				if err == nil || err.Error() != tc.errStr {
+					t.Fatalf("Match() error = %v, want %q", err, tc.errStr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Match() unexpected error: %v", err)
+			}
+			if got != tc.want {
+				t.Fatalf("Match() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestNumberClauseMatch(t *testing.T) {
+	num := func(op string, values ...any) Clause {
+		return mustNewClause(t, "age", op, NumberClause, values...)
+	}
+	age := func(values ...any) map[string][]any {
+		return map[string][]any{"age": values, "score": {99.0}}
+	}
+
+	tests := map[string]struct {
+		clause Clause
+		input  map[string][]any
+		want   bool
+		errStr string
+	}{
+		"false when attribute is not found": {
+			clause: num(eqOp, 18.0),
+			input:  map[string][]any{"score": {18.0}},
+			want:   false,
+		},
+		"neq is false when attribute is not found": {
+			clause: num(neqOp, 18.0),
+			input:  map[string][]any{"score": {18.0}},
+			want:   false,
+		},
+		"false on empty attribute values": {
+			clause: num(gtOp, 18.0),
+			input:  age(),
+			want:   false,
+		},
+		"non-number attribute value rejected": {
+			clause: num(eqOp, 18.0),
+			input:  age("18"),
+			errStr: `invalid value for attribute "age": invalid value 18`,
+		},
+		"int attribute value rejected": {
+			clause: num(eqOp, 18.0),
+			input:  age(18),
+			errStr: `invalid value for attribute "age": invalid value 18`,
+		},
+		"eq rejects attribute with multiple values": {
+			clause: num(eqOp, 18.0),
+			input:  age(18.0, 18.0),
+			errStr: "multi-value attribute not supported for eq operation in number clause",
+		},
+		"neq rejects attribute with multiple values": {
+			clause: num(neqOp, 18.0),
+			input:  age(17.0, 19.0),
+			errStr: "multi-value attribute not supported for neq operation in number clause",
+		},
+		"gt rejects attribute with multiple values": {
+			clause: num(gtOp, 18.0),
+			input:  age(20.0, 30.0),
+			errStr: "multi-value attribute not supported for gt operation in number clause",
+		},
+		"gte rejects attribute with multiple values": {
+			clause: num(gteOp, 18.0),
+			input:  age(20.0, 30.0),
+			errStr: "multi-value attribute not supported for gte operation in number clause",
+		},
+		"lt rejects attribute with multiple values": {
+			clause: num(ltOp, 18.0),
+			input:  age(10.0, 12.0),
+			errStr: "multi-value attribute not supported for lt operation in number clause",
+		},
+		"lte rejects attribute with multiple values": {
+			clause: num(lteOp, 18.0),
+			input:  age(10.0, 12.0),
+			errStr: "multi-value attribute not supported for lte operation in number clause",
+		},
+
+		"eq true when equal": {
+			clause: num(eqOp, 18.0),
+			input:  age(18.0),
+			want:   true,
+		},
+		"eq false when different": {
+			clause: num(eqOp, 18.0),
+			input:  age(18.5),
+			want:   false,
+		},
+		"eq treats 0 and -0 as equal": {
+			clause: num(eqOp, 0.0),
+			input:  age(math.Copysign(0, -1)),
+			want:   true,
+		},
+		"neq true when different": {
+			clause: num(neqOp, 18.0),
+			input:  age(21.0),
+			want:   true,
+		},
+		"neq false when equal": {
+			clause: num(neqOp, 18.0),
+			input:  age(18.0),
+			want:   false,
+		},
+
+		// Comparisons read as "attribute <op> clause value". Each operator is
+		// checked below, at and above the clause value so that swapped operands,
+		// swapped operators and off-by-equality mistakes all fail.
+		"gt false when attribute is below": {
+			clause: num(gtOp, 18.0),
+			input:  age(17.0),
+			want:   false,
+		},
+		"gt false when attribute is equal": {
+			clause: num(gtOp, 18.0),
+			input:  age(18.0),
+			want:   false,
+		},
+		"gt true when attribute is above": {
+			clause: num(gtOp, 18.0),
+			input:  age(18.001),
+			want:   true,
+		},
+		"gte false when attribute is below": {
+			clause: num(gteOp, 18.0),
+			input:  age(17.999),
+			want:   false,
+		},
+		"gte true when attribute is equal": {
+			clause: num(gteOp, 18.0),
+			input:  age(18.0),
+			want:   true,
+		},
+		"gte true when attribute is above": {
+			clause: num(gteOp, 18.0),
+			input:  age(40.0),
+			want:   true,
+		},
+		"lt true when attribute is below": {
+			clause: num(ltOp, 18.0),
+			input:  age(17.999),
+			want:   true,
+		},
+		"lt false when attribute is equal": {
+			clause: num(ltOp, 18.0),
+			input:  age(18.0),
+			want:   false,
+		},
+		"lt false when attribute is above": {
+			clause: num(ltOp, 18.0),
+			input:  age(40.0),
+			want:   false,
+		},
+		"lte true when attribute is below": {
+			clause: num(lteOp, 18.0),
+			input:  age(3.0),
+			want:   true,
+		},
+		"lte true when attribute is equal": {
+			clause: num(lteOp, 18.0),
+			input:  age(18.0),
+			want:   true,
+		},
+		"lte false when attribute is above": {
+			clause: num(lteOp, 18.0),
+			input:  age(18.001),
+			want:   false,
+		},
+		"gt handles negative numbers": {
+			clause: num(gtOp, -5.0),
+			input:  age(-2.0),
+			want:   true,
+		},
+		"lt handles negative numbers": {
+			clause: num(ltOp, -5.0),
+			input:  age(-2.0),
+			want:   false,
+		},
+
+		"il true when every attribute value is in the list": {
+			clause: num(ilOp, 1.0, 2.0, 3.0),
+			input:  age(3.0, 1.0),
+			want:   true,
+		},
+		"il true on single attribute value in the list": {
+			clause: num(ilOp, 1.0, 2.0, 3.0),
+			input:  age(2.0),
+			want:   true,
+		},
+		"il false when no attribute value is in the list": {
+			clause: num(ilOp, 1.0, 2.0, 3.0),
+			input:  age(4.0, 5.0),
+			want:   false,
+		},
+		"il false when only some attribute values are in the list": {
+			clause: num(ilOp, 1.0, 2.0, 3.0),
+			input:  age(3.0, 4.0),
+			want:   false,
+		},
+		"cnt true when attribute has every clause value": {
+			clause: num(cntOp, 1.0, 2.0),
+			input:  age(5.0, 2.0, 9.0, 1.0),
+			want:   true,
+		},
+		"cnt false when attribute misses a clause value": {
+			clause: num(cntOp, 1.0, 2.0),
+			input:  age(5.0, 2.0, 9.0),
+			want:   false,
+		},
+		// Same clause values and input: il and cnt must disagree.
+		"il true where cnt is false": {
+			clause: num(ilOp, 1.0, 2.0, 3.0),
+			input:  age(1.0, 2.0),
+			want:   true,
+		},
+		"cnt false where il is true": {
+			clause: num(cntOp, 1.0, 2.0, 3.0),
+			input:  age(1.0, 2.0),
+			want:   false,
+		},
+
+		// NaN compares unequal to everything, including itself.
+		"eq false on NaN attribute": {
+			clause: num(eqOp, 18.0),
+			input:  age(math.NaN()),
+			want:   false,
+		},
+		"gte false on NaN attribute": {
+			clause: num(gteOp, 18.0),
+			input:  age(math.NaN()),
+			want:   false,
+		},
+		"lte false on NaN attribute": {
+			clause: num(lteOp, 18.0),
+			input:  age(math.NaN()),
+			want:   false,
+		},
+
+		// Not reachable through NewClause; guards the default branch.
+		"unsupported operator on hand-built clause": {
+			clause: numberClause{attribute: "age", operator: stwOp, values: []float64{18.0}},
+			input:  age(18.0),
+			errStr: `number clause with invalid operator: "stw"`,
 		},
 	}
 
