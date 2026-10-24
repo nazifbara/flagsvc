@@ -130,16 +130,25 @@ func (c stringClause) Match(attributes map[string][]any) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("invalid value for attribute %q: %w", c.attribute, err)
 	}
+	if !slices.Contains([]string{ilOp, cntOp}, c.operator) && len(inputValues) > 1 {
+		return false, fmt.Errorf("multi-value attribute not supported for %s operation in string clause", c.operator)
+	}
+
 	switch c.operator {
 	case ilOp:
 		return valueContains(c.values, inputValues), nil
 	case cntOp:
 		return valueContains(inputValues, c.values), nil
+	case "eq":
+		return inputValues[0] == c.values[0], nil
+	case "neq":
+		return inputValues[0] != c.values[0], nil
+	case "stw":
+		return strings.HasPrefix(inputValues[0], c.values[0]), nil
+	case "edw":
+		return strings.HasSuffix(inputValues[0], c.values[0]), nil
 	default:
-		if len(values) > 1 {
-			return false, fmt.Errorf("multi-value attribute not supported for %s operation in string clause", c.operator)
-		}
-		return matchString(c.operator, c.values[0], inputValues[0])
+		return false, fmt.Errorf("string clause with invalid operator: %q", c.operator)
 	}
 }
 
@@ -184,19 +193,4 @@ func valueContains[T comparable](a []T, b []T) bool {
 		}
 	}
 	return true
-}
-
-func matchString(op, clauseValue, targetValue string) (bool, error) {
-	switch op {
-	case "eq":
-		return clauseValue == targetValue, nil
-	case "neq":
-		return clauseValue != targetValue, nil
-	case "stw":
-		return strings.HasPrefix(targetValue, clauseValue), nil
-	case "edw":
-		return strings.HasSuffix(targetValue, clauseValue), nil
-	default:
-		return false, fmt.Errorf("unknown operator: %s", op)
-	}
 }
