@@ -319,11 +319,10 @@ func TestStringClauseMatch(t *testing.T) {
 			input:  map[string][]any{"country": {"let's go touch some grass ld"}},
 			want:   false,
 		},
-		// Not reachable through NewClause; guards checkString's default branch.
 		"unsupported operator on hand-built clause": {
 			clause: stringClause{attribute: "country", operator: gtOp, values: []string{"BJ"}},
 			input:  map[string][]any{"country": {"BJ"}},
-			errStr: "unknown operator: gt",
+			errStr: "string clause with invalid operator: \"gt\"",
 		},
 	}
 
