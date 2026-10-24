@@ -600,3 +600,124 @@ func TestNumberClauseMatch(t *testing.T) {
 		})
 	}
 }
+
+func TestBooleanClauseMatch(t *testing.T) {
+	boolean := func(op string, value bool) Clause {
+		return mustNewClause(t, "isPro", op, BooleanClause, value)
+	}
+	isPro := func(values ...any) map[string][]any {
+		return map[string][]any{"isPro": values, "isBeta": {true}}
+	}
+
+	tests := map[string]struct {
+		clause Clause
+		input  map[string][]any
+		want   bool
+		errStr string
+	}{
+		"false when attribute is not found": {
+			clause: boolean(eqOp, true),
+			input:  map[string][]any{"isBeta": {true}},
+			want:   false,
+		},
+		"neq is false when attribute is not found": {
+			clause: boolean(neqOp, true),
+			input:  map[string][]any{"isBeta": {false}},
+			want:   false,
+		},
+		"false on empty attribute values": {
+			clause: boolean(eqOp, false),
+			input:  isPro(),
+			want:   false,
+		},
+		// No coercion from strings or numbers, even when they look boolean.
+		"string attribute value rejected": {
+			clause: boolean(eqOp, true),
+			input:  isPro("true"),
+			errStr: `invalid value for attribute "isPro": invalid value true`,
+		},
+		"number attribute value rejected": {
+			clause: boolean(eqOp, true),
+			input:  isPro(1.0),
+			errStr: `invalid value for attribute "isPro": invalid value 1`,
+		},
+		"eq rejects attribute with multiple values": {
+			clause: boolean(eqOp, true),
+			input:  isPro(true, true),
+			errStr: "multi-value attributes aren't supported in boolean clause",
+		},
+		"neq rejects attribute with multiple values": {
+			clause: boolean(neqOp, true),
+			input:  isPro(false, true),
+			errStr: "multi-value attributes aren't supported in boolean clause",
+		},
+
+		// Full truth tables, so a constant result, an inverted check or a
+		// swapped operator each fail at least one case.
+		"eq true: true == true": {
+			clause: boolean(eqOp, true),
+			input:  isPro(true),
+			want:   true,
+		},
+		"eq true: false == false": {
+			clause: boolean(eqOp, false),
+			input:  isPro(false),
+			want:   true,
+		},
+		"eq false: true vs false": {
+			clause: boolean(eqOp, true),
+			input:  isPro(false),
+			want:   false,
+		},
+		"eq false: false vs true": {
+			clause: boolean(eqOp, false),
+			input:  isPro(true),
+			want:   false,
+		},
+		"neq true: true vs false": {
+			clause: boolean(neqOp, true),
+			input:  isPro(false),
+			want:   true,
+		},
+		"neq true: false vs true": {
+			clause: boolean(neqOp, false),
+			input:  isPro(true),
+			want:   true,
+		},
+		"neq false: true == true": {
+			clause: boolean(neqOp, true),
+			input:  isPro(true),
+			want:   false,
+		},
+		"neq false: false == false": {
+			clause: boolean(neqOp, false),
+			input:  isPro(false),
+			want:   false,
+		},
+
+		// Not reachable through NewClause; guards the default branch.
+		"unsupported operator on hand-built clause": {
+			clause: booleanClause{attribute: "isPro", operator: gtOp, values: []bool{true}},
+			input:  isPro(true),
+			errStr: `boolean clause with invalid operator: "gt"`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got, err := tc.clause.Match(tc.input)
+			if tc.errStr != "" {
+				if err == nil || err.Error() != tc.errStr {
+					t.Fatalf("Match() error = %v, want %q", err, tc.errStr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Match() unexpected error: %v", err)
+			}
+			if got != tc.want {
+				t.Fatalf("Match() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

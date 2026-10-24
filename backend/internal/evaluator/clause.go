@@ -50,10 +50,6 @@ type booleanClause struct {
 	values    []bool
 }
 
-func (c booleanClause) Match(attributes map[string][]any) (bool, error) {
-	return false, nil
-}
-
 var operators = []string{eqOp, neqOp, gtOp, ltOp, gteOp, lteOp, stwOp, edwOp, cntOp, ilOp}
 
 var clauseOperatorMap = map[ClauseKind][]string{
@@ -183,6 +179,32 @@ func (c numberClause) Match(attributes map[string][]any) (bool, error) {
 		return inputValues[0] <= c.values[0], nil
 	default:
 		return false, fmt.Errorf("number clause with invalid operator: %q", c.operator)
+	}
+}
+
+func (c booleanClause) Match(attributes map[string][]any) (bool, error) {
+	values, ok := attributes[c.attribute]
+	if !ok || len(values) == 0 {
+		return false, nil
+	}
+	inputValues, err := convert[bool](values)
+	if err != nil {
+		return false, fmt.Errorf("invalid value for attribute %q: %w", c.attribute, err)
+	}
+	if len(inputValues) > 1 {
+		return false, errors.New("multi-value attributes aren't supported in boolean clause")
+	}
+
+	input := inputValues[0]
+	clauseValue := c.values[0]
+
+	switch c.operator {
+	case eqOp:
+		return input == clauseValue, nil
+	case neqOp:
+		return input != clauseValue, nil
+	default:
+		return false, fmt.Errorf("boolean clause with invalid operator: %q", c.operator)
 	}
 }
 
