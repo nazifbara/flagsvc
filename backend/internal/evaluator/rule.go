@@ -37,3 +37,18 @@ func NewRule(clauses []Clause, serve float64) (Rule, error) {
 		serve:   serve,
 	}, nil
 }
+
+// Match checks if the given attributes meet the rule.
+// The rule is met when every clause matches with the attributes
+func (r Rule) Match(attributes map[string][]any) (serve float64, match bool, err error) {
+	for i, clause := range r.clauses {
+		match, err := clause.Match(attributes)
+		if err != nil {
+			return 0, false, fmt.Errorf("clause at index %d errors: %w", i, err)
+		}
+		if !match {
+			return 0, false, nil
+		}
+	}
+	return r.serve, true, nil
+}
