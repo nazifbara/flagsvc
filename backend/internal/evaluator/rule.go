@@ -1,0 +1,39 @@
+package evaluator
+
+import (
+	"errors"
+	"fmt"
+	"slices"
+)
+
+// Rule represents a group of ordered clauses and what
+// it serve what those clause checkout
+type Rule struct {
+	// clauses is the list of checks to decide if to serve or not
+	clauses []Clause
+
+	// serve is the feature rollout with 0 meaning off and
+	// 1.0 a full rollout. Value in between denote partial rollout
+	serve float64
+}
+
+// NewRule build a proper Rule out of existing clauses
+func NewRule(clauses []Clause, serve float64) (Rule, error) {
+	clausesCopy := slices.Clone(clauses)
+	if len(clausesCopy) == 0 {
+		return Rule{}, errors.New("can't build a rule with no clause")
+	}
+	for i, clause := range clausesCopy {
+		if clause == nil {
+			return Rule{}, fmt.Errorf("nil clause at index %d", i)
+		}
+	}
+	if !(0 <= serve && serve <= 1) {
+		return Rule{}, fmt.Errorf("invalid serve value: %f", serve)
+	}
+
+	return Rule{
+		clauses: clausesCopy,
+		serve:   serve,
+	}, nil
+}
