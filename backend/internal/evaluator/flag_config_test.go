@@ -54,13 +54,27 @@ func TestNewFlagConfig(t *testing.T) {
 			fall:    math.NaN(),
 			errStr:  "invalid fallthrough value: NaN",
 		},
+		// The rules below aren't reachable through NewRule, so they're built by
+		// hand.
+		"rule with nil id rejected": {
+			enabled: true,
+			rules:   []Rule{country, {clauses: country.clauses, serve: 1}},
+			fall:    0,
+			errStr:  "rule with invalid id at index 1",
+		},
 		// A Rule with no clauses matches every user, so it would shadow the
 		// rules after it.
-		"zero rule rejected": {
+		"rule with no clause rejected": {
+			enabled: true,
+			rules:   []Rule{country, {id: uuid.MustParse("0192e4a0-7b3c-7d4e-9f10-2a3b4c5d6e81"), serve: 1}, adults},
+			fall:    0,
+			errStr:  "rule with no clause at index 1",
+		},
+		"zero rule rejected on its id first": {
 			enabled: true,
 			rules:   []Rule{country, {}, adults},
 			fall:    0,
-			errStr:  "invalid rule at index 1",
+			errStr:  "rule with invalid id at index 1",
 		},
 		"nil allowlist ID rejected": {
 			enabled:   true,

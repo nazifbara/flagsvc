@@ -32,8 +32,11 @@ func NewFlagConfig(enabled bool, allowlist map[uuid.UUID]struct{}, rules []Rule,
 		return FlagConfig{}, fmt.Errorf("invalid fallthrough value: %f", fall)
 	}
 	for i, rule := range rulesCopy {
+		if rule.id == uuid.Nil() {
+			return FlagConfig{}, fmt.Errorf("rule with invalid id at index %d", i)
+		}
 		if len(rule.clauses) == 0 {
-			return FlagConfig{}, fmt.Errorf("invalid rule at index %d", i)
+			return FlagConfig{}, fmt.Errorf("rule with no clause at index %d", i)
 		}
 	}
 	for key := range allowlistCopy {
