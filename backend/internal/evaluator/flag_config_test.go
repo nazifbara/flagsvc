@@ -10,7 +10,7 @@ import (
 
 func TestNewFlagConfig(t *testing.T) {
 	mustNewRule := func(serve float64, clauses ...Clause) Rule {
-		r, err := NewRule(clauses, serve)
+		r, err := NewRule(uuid.New(), clauses, serve)
 		if err != nil {
 			t.Fatalf("NewRule(): %v", err)
 		}
@@ -143,11 +143,11 @@ func TestNewFlagConfig(t *testing.T) {
 }
 
 func TestNewFlagConfigCopiesInputs(t *testing.T) {
-	country, err := NewRule([]Clause{mustNewClause(t, "country", eqOp, StringClause, "BJ")}, 1)
+	country, err := NewRule(uuid.New(), []Clause{mustNewClause(t, "country", eqOp, StringClause, "BJ")}, 1)
 	if err != nil {
 		t.Fatalf("NewRule(): %v", err)
 	}
-	adults, err := NewRule([]Clause{mustNewClause(t, "age", gteOp, NumberClause, 18.0)}, 0.5)
+	adults, err := NewRule(uuid.New(), []Clause{mustNewClause(t, "age", gteOp, NumberClause, 18.0)}, 0.5)
 	if err != nil {
 		t.Fatalf("NewRule(): %v", err)
 	}

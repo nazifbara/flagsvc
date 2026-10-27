@@ -4,58 +4,81 @@ import (
 	"errors"
 	"math"
 	"testing"
+	"uuid"
 
 	"github.com/google/go-cmp/cmp"
 )
 
 func TestNewRule(t *testing.T) {
+	ruleID := uuid.MustParse("0192e4a0-7b3c-7d4e-9f10-2a3b4c5d6e7f")
 	country := mustNewClause(t, "country", eqOp, StringClause, "BJ")
 	age := mustNewClause(t, "age", gteOp, NumberClause, 18.0)
 	isPro := mustNewClause(t, "isPro", eqOp, BooleanClause, true)
 
 	tests := map[string]struct {
+		id      uuid.UUID
 		clauses []Clause
 		serve   float64
 		want    Rule
 		errStr  string
 	}{
+		"nil id rejected": {
+			id:      uuid.Nil(),
+			clauses: []Clause{country},
+			serve:   1,
+			errStr:  "invalid rule id: 00000000-0000-0000-0000-000000000000",
+		},
+		"id checked before clauses and serve": {
+			id:      uuid.Nil(),
+			clauses: []Clause{},
+			serve:   2,
+			errStr:  "invalid rule id: 00000000-0000-0000-0000-000000000000",
+		},
 		"nil clauses rejected": {
+			id:      ruleID,
 			clauses: nil,
 			serve:   1,
 			errStr:  "can't build a rule with no clause",
 		},
 		"empty clauses rejected": {
+			id:      ruleID,
 			clauses: []Clause{},
 			serve:   1,
 			errStr:  "can't build a rule with no clause",
 		},
 		"nil entry rejected": {
+			id:      ruleID,
 			clauses: []Clause{country, nil, age},
 			serve:   1,
 			errStr:  "nil clause at index 1",
 		},
 		"nil entry checked before serve": {
+			id:      ruleID,
 			clauses: []Clause{nil},
 			serve:   2,
 			errStr:  "nil clause at index 0",
 		},
 		"negative serve rejected": {
+			id:      ruleID,
 			clauses: []Clause{country},
 			serve:   -0.1,
 			errStr:  "invalid serve value: -0.100000",
 		},
 		"serve above 1 rejected": {
+			id:      ruleID,
 			clauses: []Clause{country},
 			serve:   1.1,
 			errStr:  "invalid serve value: 1.100000",
 		},
 		// NaN fails every comparison, so a plain range check lets it through.
 		"NaN serve rejected": {
+			id:      ruleID,
 			clauses: []Clause{country},
 			serve:   math.NaN(),
 			errStr:  "invalid serve value: NaN",
 		},
 		"empty clauses checked before serve": {
+			id:      ruleID,
 			clauses: []Clause{},
 			serve:   2,
 			errStr:  "can't build a rule with no clause",
@@ -63,30 +86,34 @@ func TestNewRule(t *testing.T) {
 
 		// Both bounds are inclusive.
 		"serve 0 accepted": {
+			id:      ruleID,
 			clauses: []Clause{age},
 			serve:   0,
-			want:    Rule{clauses: []Clause{age}, serve: 0},
+			want:    Rule{id: ruleID, clauses: []Clause{age}, serve: 0},
 		},
 		"serve 1 accepted": {
+			id:      ruleID,
 			clauses: []Clause{age},
 			serve:   1,
-			want:    Rule{clauses: []Clause{age}, serve: 1},
+			want:    Rule{id: ruleID, clauses: []Clause{age}, serve: 1},
 		},
 		"partial serve accepted": {
+			id:      ruleID,
 			clauses: []Clause{country},
 			serve:   0.25,
-			want:    Rule{clauses: []Clause{country}, serve: 0.25},
+			want:    Rule{id: ruleID, clauses: []Clause{country}, serve: 0.25},
 		},
 		"multiple clauses keep their order": {
+			id:      ruleID,
 			clauses: []Clause{isPro, country, age},
 			serve:   0.5,
-			want:    Rule{clauses: []Clause{isPro, country, age}, serve: 0.5},
+			want:    Rule{id: ruleID, clauses: []Clause{isPro, country, age}, serve: 0.5},
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := NewRule(tc.clauses, tc.serve)
+			got, err := NewRule(tc.id, tc.clauses, tc.serve)
 			if tc.errStr != "" {
 				if err == nil || err.Error() != tc.errStr {
 					t.Fatalf("NewRule() error = %v, want %q", err, tc.errStr)
@@ -114,7 +141,7 @@ func TestNewRuleCopiesClauses(t *testing.T) {
 	age := mustNewClause(t, "age", gteOp, NumberClause, 18.0)
 
 	clauses := []Clause{country}
-	rule, err := NewRule(clauses, 1)
+	rule, err := NewRule(uuid.New(), clauses, 1)
 	if err != nil {
 		t.Fatalf("NewRule() unexpected error: %v", err)
 	}
@@ -131,7 +158,7 @@ func TestRuleMatch(t *testing.T) {
 	age := mustNewClause(t, "age", gteOp, NumberClause, 18.0)
 	isPro := mustNewClause(t, "isPro", eqOp, BooleanClause, true)
 	mustNewRule := func(serve float64, clauses ...Clause) Rule {
-		r, err := NewRule(clauses, serve)
+		r, err := NewRule(uuid.New(), clauses, serve)
 		if err != nil {
 			t.Fatalf("NewRule(): %v", err)
 		}
@@ -247,7 +274,7 @@ func (c stubClause) Match(map[string][]any) (bool, error) {
 
 func TestRuleMatchUnwrapsClauseError(t *testing.T) {
 	errBoom := errors.New("boom")
-	rule, err := NewRule([]Clause{stubClause{match: true}, stubClause{err: errBoom}}, 1)
+	rule, err := NewRule(uuid.New(), []Clause{stubClause{match: true}, stubClause{err: errBoom}}, 1)
 	if err != nil {
 		t.Fatalf("NewRule(): %v", err)
 	}
@@ -260,7 +287,7 @@ func TestRuleMatchUnwrapsClauseError(t *testing.T) {
 
 func TestRuleMatchStopsAtFirstMismatch(t *testing.T) {
 	var first, second, third int
-	rule, err := NewRule([]Clause{
+	rule, err := NewRule(uuid.New(), []Clause{
 		stubClause{match: true, calls: &first},
 		stubClause{match: false, calls: &second},
 		stubClause{match: true, calls: &third},

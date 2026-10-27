@@ -4,11 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"uuid"
 )
 
 // Rule represents a group of ordered clauses and what
 // it serve what those clause checkout
 type Rule struct {
+	id uuid.UUID
+
 	// clauses is the list of checks to decide if to serve or not
 	clauses []Clause
 
@@ -18,7 +21,10 @@ type Rule struct {
 }
 
 // NewRule build a proper Rule out of existing clauses
-func NewRule(clauses []Clause, serve float64) (Rule, error) {
+func NewRule(id uuid.UUID, clauses []Clause, serve float64) (Rule, error) {
+	if id == uuid.Nil() {
+		return Rule{}, fmt.Errorf("invalid rule id: %v", id)
+	}
 	clausesCopy := slices.Clone(clauses)
 	if len(clausesCopy) == 0 {
 		return Rule{}, errors.New("can't build a rule with no clause")
@@ -33,6 +39,7 @@ func NewRule(clauses []Clause, serve float64) (Rule, error) {
 	}
 
 	return Rule{
+		id:      id,
 		clauses: clausesCopy,
 		serve:   serve,
 	}, nil
