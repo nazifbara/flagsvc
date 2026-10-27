@@ -1,6 +1,7 @@
 package evaluator
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -12,9 +13,9 @@ type FlagConfig struct {
 	// enabled is the master switch. When true we procces with the
 	// allowlist, rules checks
 	enabled bool
-	// allowlist is a slice of user IDs authorize to get the feature
+	// allowlist is a map of unique keys that authorizes getting the feature
 	// bypassing the rules
-	allowlist map[uuid.UUID]struct{}
+	allowlist map[string]struct{}
 	// rules represents the checks deciding the whether or not the current
 	// user can get the feature
 	rules []Rule
@@ -24,7 +25,7 @@ type FlagConfig struct {
 }
 
 // NewFlagConfig ensure the creation of a valid FlagConfig
-func NewFlagConfig(enabled bool, allowlist map[uuid.UUID]struct{}, rules []Rule, fall float64) (FlagConfig, error) {
+func NewFlagConfig(enabled bool, allowlist map[string]struct{}, rules []Rule, fall float64) (FlagConfig, error) {
 	rulesCopy := slices.Clone(rules)
 	allowlistCopy := maps.Clone(allowlist)
 
@@ -40,8 +41,8 @@ func NewFlagConfig(enabled bool, allowlist map[uuid.UUID]struct{}, rules []Rule,
 		}
 	}
 	for key := range allowlistCopy {
-		if key == uuid.Nil() {
-			return FlagConfig{}, fmt.Errorf("invalid allowlist element %q", key)
+		if key == "" {
+			return FlagConfig{}, errors.New("empty key in the allowlist map")
 		}
 	}
 

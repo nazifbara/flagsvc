@@ -18,19 +18,19 @@ func TestNewFlagConfig(t *testing.T) {
 	}
 	country := mustNewRule(1, mustNewClause(t, "country", eqOp, StringClause, "BJ"))
 	adults := mustNewRule(0.5, mustNewClause(t, "age", gteOp, NumberClause, 18.0))
-	alice := uuid.MustParse("0192e4a0-7b3c-7d4e-9f10-2a3b4c5d6e7f")
-	bob := uuid.MustParse("0192e4a0-7b3c-7d4e-9f10-2a3b4c5d6e80")
-	users := func(ids ...uuid.UUID) map[uuid.UUID]struct{} {
-		m := make(map[uuid.UUID]struct{}, len(ids))
-		for _, id := range ids {
-			m[id] = struct{}{}
+	alice := "user-alice"
+	bob := "user-bob"
+	users := func(keys ...string) map[string]struct{} {
+		m := make(map[string]struct{}, len(keys))
+		for _, key := range keys {
+			m[key] = struct{}{}
 		}
 		return m
 	}
 
 	tests := map[string]struct {
 		enabled   bool
-		allowlist map[uuid.UUID]struct{}
+		allowlist map[string]struct{}
 		rules     []Rule
 		fall      float64
 		want      FlagConfig
@@ -76,11 +76,11 @@ func TestNewFlagConfig(t *testing.T) {
 			fall:    0,
 			errStr:  "rule with invalid id at index 1",
 		},
-		"nil allowlist ID rejected": {
+		"empty allowlist key rejected": {
 			enabled:   true,
-			allowlist: users(alice, uuid.Nil()),
+			allowlist: users(alice, ""),
 			fall:      0,
-			errStr:    `invalid allowlist element "00000000-0000-0000-0000-000000000000"`,
+			errStr:    "empty key in the allowlist map",
 		},
 		"fall checked before rules": {
 			enabled: true,
@@ -165,10 +165,10 @@ func TestNewFlagConfigCopiesInputs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRule(): %v", err)
 	}
-	alice := uuid.MustParse("0192e4a0-7b3c-7d4e-9f10-2a3b4c5d6e7f")
-	bob := uuid.MustParse("0192e4a0-7b3c-7d4e-9f10-2a3b4c5d6e80")
+	alice := "user-alice"
+	bob := "user-bob"
 
-	allowlist := map[uuid.UUID]struct{}{alice: {}}
+	allowlist := map[string]struct{}{alice: {}}
 	rules := []Rule{country}
 	cfg, err := NewFlagConfig(true, allowlist, rules, 0)
 	if err != nil {
@@ -177,7 +177,7 @@ func TestNewFlagConfigCopiesInputs(t *testing.T) {
 	allowlist[bob] = struct{}{}
 	rules[0] = adults
 
-	if diff := cmp.Diff(map[uuid.UUID]struct{}{alice: {}}, cfg.allowlist); diff != "" {
+	if diff := cmp.Diff(map[string]struct{}{alice: {}}, cfg.allowlist); diff != "" {
 		t.Errorf("allowlist changed after caller modified its map:\n%s", diff)
 	}
 	opt := cmp.AllowUnexported(Rule{}, stringClause{}, numberClause{})
