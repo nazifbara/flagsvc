@@ -3,6 +3,7 @@ package evaluator
 import (
 	"errors"
 	"fmt"
+	"hash/fnv"
 )
 
 const (
@@ -12,35 +13,54 @@ const (
 	FallthroughReason    = "fallthrough"
 )
 
-func Evaluate(flagConfig FlagConfig, attributes map[string][]any) (serve float32, reason string, err error) {
+func Evaluate(flagConfig FlagConfig, attributes map[string][]any) (on bool, reason string, err error) {
 	if !flagConfig.enabled {
-		return 0, MasterSwitchReason, nil
+		return false, MasterSwitchReason, nil
+	}
+	if flagConfig.salt == "" {
+		return false, "", errors.New("flag config with no salt")
+	}
+	if flagConfig.key == "" {
+		return false, "", errors.New("flag config with no key")
 	}
 	key, ok := attributes["key"]
+	keyString := ""
 	if ok {
 		if len(key) != 1 {
-			return 0, "", fmt.Errorf("the key attribute must have exactly one value, got: %d", len(key))
+			return false, "", fmt.Errorf("the key attribute must have exactly one value, got: %d", len(key))
 		}
-		keyString, ok := key[0].(string)
+		keyString, ok = key[0].(string)
 		if !ok {
-			return 0, "", errors.New("the key attribute must be a string")
+			return false, "", errors.New("the key attribute must be a string")
+		}
+		if keyString == "" {
+			return false, "", fmt.Errorf("the key attribute value is required")
 		}
 		if _, ok = flagConfig.allowlist[keyString]; ok {
-			return 1, AllowlistMatchReason, nil
+			return true, AllowlistMatchReason, nil
 		}
 	} else {
-		return 0, "", errors.New("the key string attributes is required")
+		return false, "", errors.New("the key attribute is required")
 	}
+
+	userBucket := bucket(flagConfig.salt, flagConfig.key, keyString)
 
 	for i, rule := range flagConfig.rules {
 		serve, matched, err := rule.Match(attributes)
 		if err != nil {
-			return 0, "", fmt.Errorf("rule at index %d errors with: %w", i, err)
+			return false, "", fmt.Errorf("rule at index %d errors with: %w", i, err)
 		}
 		if matched {
-			return serve, RuleMatchReason + rule.id.String(), nil
+			return userBucket < serve, RuleMatchReason + rule.id.String(), nil
 		}
 	}
 
-	return flagConfig.fall, FallthroughReason, nil
+	return userBucket < flagConfig.fall, FallthroughReason, nil
+}
+
+// bucket gives the user's rollout percentage bucket in 0.01% granularity
+func bucket(salt, flagKey, userKey string) float32 {
+	h := fnv.New32a()
+	h.Write([]byte(salt + "." + flagKey + "." + userKey))
+	return float32(h.Sum32()%10000) / 10000
 }
