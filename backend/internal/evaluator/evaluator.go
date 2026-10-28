@@ -28,6 +28,8 @@ func Evaluate(flagConfig FlagConfig, attributes map[string][]any) (serve float64
 		if _, ok = flagConfig.allowlist[keyString]; ok {
 			return 1, AllowlistMatchReason, nil
 		}
+	} else {
+		return 0, "", errors.New("the key string attributes is required")
 	}
 
 	for i, rule := range flagConfig.rules {
