@@ -3,7 +3,9 @@ package evaluator
 import (
 	"errors"
 	"fmt"
+	"math"
 	"testing"
+	"testing/quick"
 	"uuid"
 )
 
@@ -424,6 +426,8 @@ func TestBucketDependsOnEveryInput(t *testing.T) {
 }
 
 func TestEvaluateRollout(t *testing.T) {
+	// The keys user-0 … user-19999 are the same on every run, so each share
+	// below is a fixed number and the test can't flake.
 	const users = 20000
 	// on reports, for each user, whether a flag with only a fallthrough is on.
 	on := func(salt, flagKey string, fall float32) []bool {
@@ -440,25 +444,35 @@ func TestEvaluateRollout(t *testing.T) {
 		}
 		return out
 	}
-	share := func(xs []bool) float64 {
+	// share is the fraction of results equal to want.
+	share := func(xs []bool, want bool) float64 {
 		n := 0
 		for _, x := range xs {
-			if x {
+			if x == want {
 				n++
 			}
 		}
 		return float64(n) / float64(len(xs))
 	}
+	// If the hash spreads users evenly, each user lands below a target share
+	// p like a coin weighted p, so over n users the measured share drifts
+	// from p by about sqrt(p(1-p)/n): 0.35 points at p = 0.5, 0.07 at 0.01.
+	// Allowing 5 times that drift means an even hash essentially never fails
+	// (well under 1 in a million), while one that's off by a few points does.
+	// The allowance scales with p so that 2% passing as 1% is caught too.
 	near := func(t *testing.T, what string, got, want float64) {
 		t.Helper()
-		if got < want-0.02 || got > want+0.02 {
-			t.Errorf("%s = %.4f, want %.2f ± 0.02", what, got, want)
+		tol := 5 * math.Sqrt(want*(1-want)/users)
+		if math.Abs(got-want) > tol {
+			t.Errorf("%s = %.4f, want %.4f ± %.4f", what, got, want, tol)
 		}
 	}
 
-	t.Run("share of users on follows the rollout", func(t *testing.T) {
+	t.Run("share of each result follows the rollout", func(t *testing.T) {
 		for _, fall := range []float32{0.01, 0.1, 0.5, 0.9, 0.99} {
-			near(t, fmt.Sprintf("share on at %v", fall), share(on("s4lt", "new-checkout", fall)), float64(fall))
+			results := on("s4lt", "new-checkout", fall)
+			near(t, fmt.Sprintf("share on at %v", fall), share(results, true), float64(fall))
+			near(t, fmt.Sprintf("share off at %v", fall), share(results, false), 1-float64(fall))
 		}
 	})
 
@@ -481,7 +495,7 @@ func TestEvaluateRollout(t *testing.T) {
 		for i := range both {
 			both[i] = a[i] && b[i]
 		}
-		near(t, "share on in both flags", share(both), 0.25)
+		near(t, "share on in both flags", share(both, true), 0.25)
 	})
 
 	// Changing the salt is how a rollout gets reshuffled.
@@ -492,6 +506,42 @@ func TestEvaluateRollout(t *testing.T) {
 		for i := range moved {
 			moved[i] = a[i] != b[i]
 		}
-		near(t, "share of users whose result changed", share(moved), 0.5)
+		near(t, "share of users whose result changed", share(moved, true), 0.5)
 	})
+
+	t.Run("same salt keeps every user's result", func(t *testing.T) {
+		a := on("s4lt", "new-checkout", 0.5)
+		b := on("s4lt", "new-checkout", 0.5)
+		for i := range a {
+			if a[i] != b[i] {
+				t.Fatalf("user-%d got %v then %v with the same salt", i, a[i], b[i])
+			}
+		}
+	})
+}
+
+// Same property as "raising the rollout keeps users on", over random salts
+// and user keys rather than the fixed set.
+func TestEvaluateRaisingRolloutKeepsUsersOnProperty(t *testing.T) {
+	property := func(salt, userKey string) bool {
+		if salt == "" || userKey == "" {
+			return true
+		}
+		attributes := map[string][]any{"key": {userKey}}
+		at := func(fall float32) bool {
+			cfg, err := NewFlagConfig(true, salt, "new-checkout", nil, nil, fall)
+			if err != nil {
+				t.Fatalf("NewFlagConfig(): %v", err)
+			}
+			on, _, err := Evaluate(cfg, attributes)
+			if err != nil {
+				t.Fatalf("Evaluate(): %v", err)
+			}
+			return on
+		}
+		return !at(0.2) || at(0.3)
+	}
+	if err := quick.Check(property, &quick.Config{MaxCount: 10000}); err != nil {
+		t.Fatal(err)
+	}
 }
