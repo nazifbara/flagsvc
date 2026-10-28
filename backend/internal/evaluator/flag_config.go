@@ -25,11 +25,11 @@ type FlagConfig struct {
 	rules []Rule
 	// fall is the fallthrough result when all the checks fail
 	// to answer. It's a rollout percentage of inclusive range [0, 1]
-	fall float64
+	fall float32
 }
 
 // NewFlagConfig ensure the creation of a valid FlagConfig
-func NewFlagConfig(enabled bool, flagSalt, flagKey string, allowlist map[string]struct{}, rules []Rule, fall float64) (FlagConfig, error) {
+func NewFlagConfig(enabled bool, flagSalt, flagKey string, allowlist map[string]struct{}, rules []Rule, fall float32) (FlagConfig, error) {
 	rulesCopy := slices.Clone(rules)
 	allowlistCopy := maps.Clone(allowlist)
 

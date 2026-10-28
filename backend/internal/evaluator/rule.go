@@ -17,11 +17,11 @@ type Rule struct {
 
 	// serve is the feature rollout with 0 meaning off and
 	// 1.0 a full rollout. Value in between denote partial rollout
-	serve float64
+	serve float32
 }
 
 // NewRule build a proper Rule out of existing clauses
-func NewRule(id uuid.UUID, clauses []Clause, serve float64) (Rule, error) {
+func NewRule(id uuid.UUID, clauses []Clause, serve float32) (Rule, error) {
 	if id == uuid.Nil() {
 		return Rule{}, fmt.Errorf("invalid rule id: %v", id)
 	}
@@ -47,7 +47,7 @@ func NewRule(id uuid.UUID, clauses []Clause, serve float64) (Rule, error) {
 
 // Match checks if the given attributes meet the rule.
 // The rule is met when every clause matches with the attributes
-func (r Rule) Match(attributes map[string][]any) (serve float64, match bool, err error) {
+func (r Rule) Match(attributes map[string][]any) (serve float32, match bool, err error) {
 	for i, clause := range r.clauses {
 		match, err := clause.Match(attributes)
 		if err != nil {

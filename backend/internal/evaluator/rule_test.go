@@ -18,7 +18,7 @@ func TestNewRule(t *testing.T) {
 	tests := map[string]struct {
 		id      uuid.UUID
 		clauses []Clause
-		serve   float64
+		serve   float32
 		want    Rule
 		errStr  string
 	}{
@@ -74,7 +74,7 @@ func TestNewRule(t *testing.T) {
 		"NaN serve rejected": {
 			id:      ruleID,
 			clauses: []Clause{country},
-			serve:   math.NaN(),
+			serve:   float32(math.NaN()),
 			errStr:  "invalid serve value: NaN",
 		},
 		"empty clauses checked before serve": {
@@ -157,7 +157,7 @@ func TestRuleMatch(t *testing.T) {
 	country := mustNewClause(t, "country", eqOp, StringClause, "BJ")
 	age := mustNewClause(t, "age", gteOp, NumberClause, 18.0)
 	isPro := mustNewClause(t, "isPro", eqOp, BooleanClause, true)
-	mustNewRule := func(serve float64, clauses ...Clause) Rule {
+	mustNewRule := func(serve float32, clauses ...Clause) Rule {
 		r, err := NewRule(uuid.New(), clauses, serve)
 		if err != nil {
 			t.Fatalf("NewRule(): %v", err)
@@ -169,7 +169,7 @@ func TestRuleMatch(t *testing.T) {
 	tests := map[string]struct {
 		rule       Rule
 		attributes map[string][]any
-		wantServe  float64
+		wantServe  float32
 		wantMatch  bool
 		errStr     string
 	}{
