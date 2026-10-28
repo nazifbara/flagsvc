@@ -56,6 +56,12 @@ func TestEvaluate(t *testing.T) {
 			wantServe:  0,
 			wantReason: MasterSwitchReason,
 		},
+		"disabled flag ignores a missing key": {
+			config:     mustNewFlagConfig(false, nil, 1, pro),
+			attributes: map[string][]any{"isPro": {true}},
+			wantServe:  0,
+			wantReason: MasterSwitchReason,
+		},
 		"disabled flag ignores erroring rules": {
 			config:     mustNewFlagConfig(false, nil, 1, pro),
 			attributes: map[string][]any{"isPro": {"true"}},
@@ -88,11 +94,31 @@ func TestEvaluate(t *testing.T) {
 			wantServe:  0.5,
 			wantReason: RuleMatchReason + countryID.String(),
 		},
-		"missing key goes on to rules": {
+		"missing key rejected": {
 			config:     mustNewFlagConfig(true, []string{alice}, 0, country),
 			attributes: map[string][]any{"country": {"BJ"}},
-			wantServe:  0.5,
-			wantReason: RuleMatchReason + countryID.String(),
+			errStr:     "the key string attributes is required",
+		},
+		// The key is required even when there is no allowlist to check it against.
+		"missing key rejected without an allowlist": {
+			config:     mustNewFlagConfig(true, nil, 1),
+			attributes: map[string][]any{"country": {"BJ"}},
+			errStr:     "the key string attributes is required",
+		},
+		"missing key rejected before erroring rules": {
+			config:     mustNewFlagConfig(true, nil, 0, pro),
+			attributes: map[string][]any{"isPro": {"true"}},
+			errStr:     "the key string attributes is required",
+		},
+		"no attributes rejected": {
+			config:     mustNewFlagConfig(true, []string{alice}, 0.3, pro),
+			attributes: map[string][]any{},
+			errStr:     "the key string attributes is required",
+		},
+		"nil attributes rejected": {
+			config:     mustNewFlagConfig(true, nil, 0.3),
+			attributes: nil,
+			errStr:     "the key string attributes is required",
 		},
 		"key with multiple values rejected": {
 			config:     mustNewFlagConfig(true, []string{alice}, 0, country),
@@ -118,26 +144,26 @@ func TestEvaluate(t *testing.T) {
 
 		"matching rule serves its value": {
 			config:     mustNewFlagConfig(true, nil, 0, pro),
-			attributes: map[string][]any{"isPro": {true}},
+			attributes: map[string][]any{"key": {bob}, "isPro": {true}},
 			wantServe:  1,
 			wantReason: RuleMatchReason + proID.String(),
 		},
 		// A rule serving 0 is still a match, not a fallthrough.
 		"matching rule serving 0": {
 			config:     mustNewFlagConfig(true, nil, 1, off),
-			attributes: map[string][]any{"country": {"FR"}},
+			attributes: map[string][]any{"key": {bob}, "country": {"FR"}},
 			wantServe:  0,
 			wantReason: RuleMatchReason + offID.String(),
 		},
 		"first matching rule wins": {
 			config:     mustNewFlagConfig(true, nil, 0, pro, country),
-			attributes: map[string][]any{"isPro": {true}, "country": {"BJ"}},
+			attributes: map[string][]any{"key": {bob}, "isPro": {true}, "country": {"BJ"}},
 			wantServe:  1,
 			wantReason: RuleMatchReason + proID.String(),
 		},
 		"later rule matches when earlier ones don't": {
 			config:     mustNewFlagConfig(true, nil, 0, pro, off, country),
-			attributes: map[string][]any{"isPro": {false}, "country": {"BJ"}},
+			attributes: map[string][]any{"key": {bob}, "isPro": {false}, "country": {"BJ"}},
 			wantServe:  0.5,
 			wantReason: RuleMatchReason + countryID.String(),
 		},
@@ -145,7 +171,7 @@ func TestEvaluate(t *testing.T) {
 		// never surface.
 		"match stops before a later erroring rule": {
 			config:     mustNewFlagConfig(true, nil, 0, country, pro),
-			attributes: map[string][]any{"country": {"BJ"}, "isPro": {"true"}},
+			attributes: map[string][]any{"key": {bob}, "country": {"BJ"}, "isPro": {"true"}},
 			wantServe:  0.5,
 			wantReason: RuleMatchReason + countryID.String(),
 		},
@@ -158,13 +184,13 @@ func TestEvaluate(t *testing.T) {
 		},
 		"no rules serves fall": {
 			config:     mustNewFlagConfig(true, nil, 0.7),
-			attributes: map[string][]any{"country": {"BJ"}},
+			attributes: map[string][]any{"key": {bob}, "country": {"BJ"}},
 			wantServe:  0.7,
 			wantReason: FallthroughReason,
 		},
-		"no attributes serves fall": {
+		"only a key serves fall": {
 			config:     mustNewFlagConfig(true, []string{alice}, 0.3, pro),
-			attributes: map[string][]any{},
+			attributes: map[string][]any{"key": {bob}},
 			wantServe:  0.3,
 			wantReason: FallthroughReason,
 		},
@@ -172,7 +198,7 @@ func TestEvaluate(t *testing.T) {
 		// On a rule error the flag serves 0, not its fallthrough value.
 		"rule error is wrapped with its index and serves 0": {
 			config:     mustNewFlagConfig(true, nil, 0.4, country, pro),
-			attributes: map[string][]any{"country": {"FR"}, "isPro": {"true"}},
+			attributes: map[string][]any{"key": {bob}, "country": {"FR"}, "isPro": {"true"}},
 			wantServe:  0,
 			errStr:     `rule at index 1 errors with: clause at index 0 errors: invalid value for attribute "isPro": invalid value true`,
 		},
@@ -211,7 +237,7 @@ func TestEvaluateUnwrapsRuleError(t *testing.T) {
 		t.Fatalf("NewFlagConfig(): %v", err)
 	}
 
-	_, _, err = Evaluate(cfg, nil)
+	_, _, err = Evaluate(cfg, map[string][]any{"key": {"user-alice"}})
 	if !errors.Is(err, errBoom) {
 		t.Fatalf("Evaluate() error = %v, want it to wrap %v", err, errBoom)
 	}
