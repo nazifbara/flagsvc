@@ -20,6 +20,7 @@ func TestNewFlagConfig(t *testing.T) {
 	adults := mustNewRule(0.5, mustNewClause(t, "age", gteOp, NumberClause, 18.0))
 	alice := "user-alice"
 	bob := "user-bob"
+	const key, salt = "new-checkout", "s4lt"
 	users := func(keys ...string) map[string]struct{} {
 		m := make(map[string]struct{}, len(keys))
 		for _, key := range keys {
@@ -29,6 +30,8 @@ func TestNewFlagConfig(t *testing.T) {
 	}
 
 	tests := map[string]struct {
+		salt      string
+		key       string
 		enabled   bool
 		allowlist map[string]struct{}
 		rules     []Rule
@@ -36,19 +39,55 @@ func TestNewFlagConfig(t *testing.T) {
 		want      FlagConfig
 		errStr    string
 	}{
+		"empty salt rejected": {
+			salt:    "",
+			key:     key,
+			enabled: true,
+			errStr:  "the flagSalt is required",
+		},
+		"empty key rejected": {
+			salt:    salt,
+			key:     "",
+			enabled: true,
+			errStr:  "the flagKey is required",
+		},
+		"salt checked before key": {
+			enabled: true,
+			errStr:  "the flagSalt is required",
+		},
+		"key checked before fall": {
+			salt:    salt,
+			enabled: true,
+			fall:    2,
+			errStr:  "the flagKey is required",
+		},
+		// Salt and key are adjacent string arguments; distinct values catch
+		// them being swapped.
+		"key and salt kept as given": {
+			salt:    " S4lt ",
+			key:     "New-Checkout",
+			enabled: true,
+			want:    FlagConfig{key: "New-Checkout", salt: " S4lt ", enabled: true},
+		},
 		"negative fall rejected": {
+			salt:    salt,
+			key:     key,
 			enabled: true,
 			rules:   []Rule{country},
 			fall:    -0.1,
 			errStr:  "invalid fallthrough value: -0.100000",
 		},
 		"fall above 1 rejected": {
+			salt:    salt,
+			key:     key,
 			enabled: true,
 			rules:   []Rule{country},
 			fall:    1.1,
 			errStr:  "invalid fallthrough value: 1.100000",
 		},
 		"NaN fall rejected": {
+			salt:    salt,
+			key:     key,
 			enabled: true,
 			rules:   []Rule{country},
 			fall:    math.NaN(),
@@ -57,6 +96,8 @@ func TestNewFlagConfig(t *testing.T) {
 		// The rules below aren't reachable through NewRule, so they're built by
 		// hand.
 		"rule with nil id rejected": {
+			salt:    salt,
+			key:     key,
 			enabled: true,
 			rules:   []Rule{country, {clauses: country.clauses, serve: 1}},
 			fall:    0,
@@ -65,24 +106,32 @@ func TestNewFlagConfig(t *testing.T) {
 		// A Rule with no clauses matches every user, so it would shadow the
 		// rules after it.
 		"rule with no clause rejected": {
+			salt:    salt,
+			key:     key,
 			enabled: true,
 			rules:   []Rule{country, {id: uuid.MustParse("0192e4a0-7b3c-7d4e-9f10-2a3b4c5d6e81"), serve: 1}, adults},
 			fall:    0,
 			errStr:  "rule with no clause at index 1",
 		},
 		"zero rule rejected on its id first": {
+			salt:    salt,
+			key:     key,
 			enabled: true,
 			rules:   []Rule{country, {}, adults},
 			fall:    0,
 			errStr:  "rule with invalid id at index 1",
 		},
 		"empty allowlist key rejected": {
+			salt:      salt,
+			key:       key,
 			enabled:   true,
 			allowlist: users(alice, ""),
 			fall:      0,
 			errStr:    "empty key in the allowlist map",
 		},
 		"fall checked before rules": {
+			salt:    salt,
+			key:     key,
 			enabled: true,
 			rules:   []Rule{{}},
 			fall:    2,
@@ -91,49 +140,61 @@ func TestNewFlagConfig(t *testing.T) {
 
 		// Both bounds of fall are inclusive.
 		"fall 0 accepted": {
+			salt:    salt,
+			key:     key,
 			enabled: true,
 			rules:   []Rule{country},
 			fall:    0,
-			want:    FlagConfig{enabled: true, rules: []Rule{country}, fall: 0},
+			want:    FlagConfig{key: key, salt: salt, enabled: true, rules: []Rule{country}, fall: 0},
 		},
 		"fall 1 accepted": {
+			salt:    salt,
+			key:     key,
 			enabled: true,
 			rules:   []Rule{country},
 			fall:    1,
-			want:    FlagConfig{enabled: true, rules: []Rule{country}, fall: 1},
+			want:    FlagConfig{key: key, salt: salt, enabled: true, rules: []Rule{country}, fall: 1},
 		},
 		"partial fall accepted": {
+			salt:      salt,
+			key:       key,
 			enabled:   true,
 			allowlist: users(alice),
 			rules:     []Rule{country},
 			fall:      0.1,
-			want:      FlagConfig{enabled: true, allowlist: users(alice), rules: []Rule{country}, fall: 0.1},
+			want:      FlagConfig{key: key, salt: salt, enabled: true, allowlist: users(alice), rules: []Rule{country}, fall: 0.1},
 		},
 		"disabled flag keeps its settings": {
+			salt:      salt,
+			key:       key,
 			enabled:   false,
 			allowlist: users(alice),
 			rules:     []Rule{country},
 			fall:      0.1,
-			want:      FlagConfig{enabled: false, allowlist: users(alice), rules: []Rule{country}, fall: 0.1},
+			want:      FlagConfig{key: key, salt: salt, enabled: false, allowlist: users(alice), rules: []Rule{country}, fall: 0.1},
 		},
 		// Rules are evaluated in order, so the order given must be kept.
 		"rules keep their order": {
+			salt:      salt,
+			key:       key,
 			enabled:   true,
 			allowlist: users(alice, bob),
 			rules:     []Rule{adults, country},
 			fall:      0.5,
-			want:      FlagConfig{enabled: true, allowlist: users(alice, bob), rules: []Rule{adults, country}, fall: 0.5},
+			want:      FlagConfig{key: key, salt: salt, enabled: true, allowlist: users(alice, bob), rules: []Rule{adults, country}, fall: 0.5},
 		},
 		"no allowlist or rules, only fall": {
+			salt:    salt,
+			key:     key,
 			enabled: true,
 			fall:    1,
-			want:    FlagConfig{enabled: true, fall: 1},
+			want:    FlagConfig{key: key, salt: salt, enabled: true, fall: 1},
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := NewFlagConfig(tc.enabled, tc.allowlist, tc.rules, tc.fall)
+			got, err := NewFlagConfig(tc.enabled, tc.salt, tc.key, tc.allowlist, tc.rules, tc.fall)
 			if tc.errStr != "" {
 				if err == nil || err.Error() != tc.errStr {
 					t.Fatalf("NewFlagConfig() error = %v, want %q", err, tc.errStr)
@@ -170,7 +231,7 @@ func TestNewFlagConfigCopiesInputs(t *testing.T) {
 
 	allowlist := map[string]struct{}{alice: {}}
 	rules := []Rule{country}
-	cfg, err := NewFlagConfig(true, allowlist, rules, 0)
+	cfg, err := NewFlagConfig(true, "s4lt", "new-checkout", allowlist, rules, 0)
 	if err != nil {
 		t.Fatalf("NewFlagConfig() unexpected error: %v", err)
 	}

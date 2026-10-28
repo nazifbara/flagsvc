@@ -19,7 +19,7 @@ func TestEvaluate(t *testing.T) {
 		for _, key := range allowlist {
 			users[key] = struct{}{}
 		}
-		cfg, err := NewFlagConfig(enabled, users, rules, fall)
+		cfg, err := NewFlagConfig(enabled, "s4lt", "new-checkout", users, rules, fall)
 		if err != nil {
 			t.Fatalf("NewFlagConfig(): %v", err)
 		}
@@ -206,7 +206,7 @@ func TestEvaluateUnwrapsRuleError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRule(): %v", err)
 	}
-	cfg, err := NewFlagConfig(true, nil, []Rule{rule}, 0)
+	cfg, err := NewFlagConfig(true, "s4lt", "new-checkout", nil, []Rule{rule}, 0)
 	if err != nil {
 		t.Fatalf("NewFlagConfig(): %v", err)
 	}
