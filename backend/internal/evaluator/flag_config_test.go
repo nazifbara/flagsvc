@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewFlagConfig(t *testing.T) {
-	mustNewRule := func(serve float64, clauses ...Clause) Rule {
+	mustNewRule := func(serve float32, clauses ...Clause) Rule {
 		r, err := NewRule(uuid.New(), clauses, serve)
 		if err != nil {
 			t.Fatalf("NewRule(): %v", err)
@@ -35,7 +35,7 @@ func TestNewFlagConfig(t *testing.T) {
 		enabled   bool
 		allowlist map[string]struct{}
 		rules     []Rule
-		fall      float64
+		fall      float32
 		want      FlagConfig
 		errStr    string
 	}{
@@ -90,7 +90,7 @@ func TestNewFlagConfig(t *testing.T) {
 			key:     key,
 			enabled: true,
 			rules:   []Rule{country},
-			fall:    math.NaN(),
+			fall:    float32(math.NaN()),
 			errStr:  "invalid fallthrough value: NaN",
 		},
 		// The rules below aren't reachable through NewRule, so they're built by

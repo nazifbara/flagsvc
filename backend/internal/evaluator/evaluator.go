@@ -12,7 +12,7 @@ const (
 	FallthroughReason    = "fallthrough"
 )
 
-func Evaluate(flagConfig FlagConfig, attributes map[string][]any) (serve float64, reason string, err error) {
+func Evaluate(flagConfig FlagConfig, attributes map[string][]any) (serve float32, reason string, err error) {
 	if !flagConfig.enabled {
 		return 0, MasterSwitchReason, nil
 	}

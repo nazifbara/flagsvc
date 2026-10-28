@@ -7,14 +7,14 @@ import (
 )
 
 func TestEvaluate(t *testing.T) {
-	mustNewRule := func(id uuid.UUID, serve float64, clauses ...Clause) Rule {
+	mustNewRule := func(id uuid.UUID, serve float32, clauses ...Clause) Rule {
 		r, err := NewRule(id, clauses, serve)
 		if err != nil {
 			t.Fatalf("NewRule(): %v", err)
 		}
 		return r
 	}
-	mustNewFlagConfig := func(enabled bool, allowlist []string, fall float64, rules ...Rule) FlagConfig {
+	mustNewFlagConfig := func(enabled bool, allowlist []string, fall float32, rules ...Rule) FlagConfig {
 		users := make(map[string]struct{}, len(allowlist))
 		for _, key := range allowlist {
 			users[key] = struct{}{}
@@ -39,7 +39,7 @@ func TestEvaluate(t *testing.T) {
 	tests := map[string]struct {
 		config     FlagConfig
 		attributes map[string][]any
-		wantServe  float64
+		wantServe  float32
 		wantReason string
 		errStr     string
 	}{
