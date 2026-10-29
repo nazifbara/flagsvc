@@ -61,6 +61,7 @@ func Evaluate(flagConfig FlagConfig, attributes map[string][]any) (on bool, reas
 // bucket gives the user's rollout percentage bucket in 0.01% granularity
 func bucket(salt, flagKey, userKey string) float32 {
 	h := fnv.New32a()
-	h.Write([]byte(salt + "." + flagKey + "." + userKey))
+	// hash.Hash's Write never returns an error.
+	_, _ = h.Write([]byte(salt + "." + flagKey + "." + userKey))
 	return float32(h.Sum32()%10000) / 10000
 }
